@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>$ONEMAC: every trade buys a Big Mac</title>
+  <meta name="description" content="$ONEMAC is a Solana memecoin paired with McDonald's tokenized stock. 3% of every trade buys Big Macs for people experiencing homelessness.">
+  <meta name="theme-color" content="#0b0b0c">
+  <link rel="canonical" href="https://onemac.xyz/">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://onemac.xyz/">
+  <meta property="og:title" content="$ONEMAC: every trade buys a Big Mac">
+  <meta property="og:description" content="3% of every $ONEMAC trade buys Big Macs for people experiencing homelessness. Live counter on-chain.">
+  <meta property="og:image" content="https://onemac.xyz/assets/coin-1024.png">
+  <meta name="twitter:card" content="summary">
+  <link rel="icon" type="image/png" href="/assets/favicon-64.png">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Instrument+Serif&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <main id="main">
+
+    <section class="hero" aria-labelledby="hero-title">
+      <img class="coin" src="/assets/coin-512.png" srcset="/assets/coin-512.png 1x, /assets/coin-1024.png 2x" width="260" height="260" alt="$ONEMAC coin">
+      <p class="eyebrow"><span class="dot" aria-hidden="true"></span>Solana · paired with <span data-pair>MCDx</span></p>
+      <h1 id="hero-title">$ONEMAC</h1>
+      <p class="lede">Every trade buys a Big Mac for someone without a home.</p>
+      <div class="actions">
+        <a class="btn btn-primary" id="buy" href="#how" data-launch>Launching soon</a>
+        <button class="btn btn-ghost" id="copy-ca" type="button" hidden>
+          <span class="mono" id="ca-short"></span><span class="copy-label">Copy CA</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="counter" aria-labelledby="counter-title">
+      <p class="label" id="counter-title">Big Macs bought so far</p>
+      <div class="big" id="macs" aria-live="polite" aria-busy="true"><span class="sk sk-big" aria-hidden="true"></span></div>
+      <dl class="stats">
+        <div><dt>Fees routed</dt><dd id="fees" aria-busy="true"><span class="sk sk-num" aria-hidden="true"></span></dd></div>
+        <div><dt>Fee payments</dt><dd id="inflows" aria-busy="true"><span class="sk sk-num" aria-hidden="true"></span></dd></div>
+        <div><dt>Per Big Mac</dt><dd id="price" aria-busy="true"><span class="sk sk-num" aria-hidden="true"></span></dd></div>
+      </dl>
+      <p class="note" id="counter-note">Read live from the fee wallet on Solana.</p>
+    </section>
+
+    <section class="calc" aria-labelledby="calc-title">
+      <h2 id="calc-title">How many Big Macs is your trade?</h2>
+      <div class="calc-box">
+        <label class="calc-in" for="amount">
+          <span class="label">You trade</span>
+          <span class="field"><span class="cur" aria-hidden="true">$</span><input id="amount" type="text" inputmode="decimal" autocomplete="off" value="1,000" aria-describedby="calc-help"></span>
+        </label>
+        <div class="chips" role="group" aria-label="Quick amounts">
+          <button type="button" data-amt="100">$100</button>
+          <button type="button" data-amt="1000">$1k</button>
+          <button type="button" data-amt="10000">$10k</button>
+          <button type="button" data-amt="100000">$100k</button>
+        </div>
+        <input id="slider" type="range" min="0" max="1000" value="500" aria-label="Trade size">
+        <div class="calc-out">
+          <div><span class="label"><span data-fee>3</span>% fee</span><span class="val mono" id="calc-fee">$30.00</span></div>
+          <div class="arrow" aria-hidden="true">→</div>
+          <div><span class="label">Big Macs</span><span class="val mono accent" id="calc-macs">5</span></div>
+        </div>
+        <div class="burgers" id="burgers" aria-hidden="true"></div>
+        <p class="note" id="calc-help">Buys and sells both count. Priced at <span data-bigmac>$5.79</span> per Big Mac.</p>
+      </div>
+    </section>
+
+    <section class="how" id="how" aria-labelledby="how-title">
+      <h2 id="how-title">How it works</h2>
+      <ol class="steps">
+        <li><span class="n mono">01</span><h3>You trade $ONEMAC</h3><p>Buy or sell against <span data-pair>MCDx</span>, McDonald's tokenized stock on Solana.</p></li>
+        <li><span class="n mono">02</span><h3><span data-fee>3</span>% goes to the fee wallet</h3><p>Taken automatically on every trade. Public and on-chain.</p></li>
+        <li><span class="n mono">03</span><h3>Fees are routed to Big Macs</h3><p>Ordered from McDonald's restaurants worldwide through the big delivery apps.</p></li>
+        <li><span class="n mono">04</span><h3>Delivered to people in need</h3><p>Hot meals for people experiencing homelessness, counted live above.</p></li>
+      </ol>
+    </section>
+
+    <section class="where" aria-labelledby="where-title">
+      <h2 id="where-title">Ordered through</h2>
+      <p class="sub">McDonald's restaurants across the world, via the platforms that deliver them.</p>
+      <ul class="logos">
+        <li><img src="/assets/logos/ubereats.svg" alt="" width="28" height="28"><span>Uber Eats</span></li>
+        <li><img src="/assets/logos/doordash.svg" alt="" width="28" height="28"><span>DoorDash</span></li>
+        <li><img src="/assets/logos/deliveroo.svg" alt="" width="28" height="28"><span>Deliveroo</span></li>
+        <li><img src="/assets/logos/justeat.svg" alt="" width="28" height="28"><span>Just Eat</span></li>
+        <li><img class="wide" src="/assets/logos/grubhub.svg" alt="" width="72" height="20"><span>Grubhub</span></li>
+        <li><img src="/assets/logos/foodpanda.svg" alt="" width="28" height="28"><span>foodpanda</span></li>
+        <li><img src="/assets/logos/glovo.svg" alt="" width="28" height="28"><span>Glovo</span></li>
+        <li><img src="/assets/logos/swiggy.svg" alt="" width="28" height="28"><span>Swiggy</span></li>
+      </ul>
+    </section>
+
+    <p class="fine">$ONEMAC is a memecoin with no promise of value or returns. Not affiliated with or endorsed by McDonald's Corporation or any delivery platform shown. Logos belong to their owners.</p>
+  </main>
+</body>
+</html>
