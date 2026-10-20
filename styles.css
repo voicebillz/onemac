@@ -107,6 +107,26 @@ h1 {
 .btn-ghost:hover { border-color: var(--ink-2); }
 .btn-ghost .mono { color: var(--ink-2); font-size: 13px; }
 
+.ca {
+  min-height: 48px; max-width: 100%; display: inline-flex; align-items: center; gap: 12px; padding: 0 8px 0 16px;
+  border-radius: 999px; border: 1px solid var(--line-2); background: var(--panel); color: var(--ink);
+  font: 500 14px/1 var(--sans); cursor: pointer;
+  transition: border-color 160ms var(--ease-out), transform 110ms var(--ease-out);
+}
+.ca:not(:disabled):hover { border-color: var(--gold); }
+.ca:not(:disabled):active { transform: scale(.98); }
+.ca:disabled { cursor: default; color: var(--muted); }
+.ca-k { font: 600 11px/1 var(--mono); letter-spacing: .14em; color: var(--gold); }
+.ca-v { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.ca:disabled .ca-v { font-family: var(--sans); padding-right: 8px; }
+.ca-copy:empty { display: none; }
+.ca-copy {
+  flex: none; padding: 8px 12px; border-radius: 999px; background: var(--gold); color: var(--gold-ink);
+  font: 600 13px/1 var(--sans);
+}
+.ca.copied { border-color: var(--gold); }
+.ca-hint { margin-top: 10px; color: var(--muted); font-size: 12.5px; }
+
 /* Live counter */
 .counter { text-align: center; }
 .big {
@@ -208,6 +228,9 @@ h1 {
   .steps li + li { margin-top: 20px; border-top: 1px solid var(--line); }
   .stats dt { font-size: 10px; letter-spacing: .1em; }
   .calc-box { padding: 18px; }
+  .actions { width: 100%; }
+  .ca, #buy { width: 100%; justify-content: center; }
+  .ca-v { font-size: 13px; }
   .readout div + div { padding-left: 10px; }
   .chart svg { height: 180px; }
   .logos li { padding: 0 14px; font-size: 15px; }

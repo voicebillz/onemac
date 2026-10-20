@@ -10,28 +10,38 @@ document.querySelectorAll("[data-pair]").forEach((el) => (el.textContent = CONFI
 document.querySelectorAll("[data-fee]").forEach((el) => (el.textContent = CONFIG.feePct));
 document.querySelectorAll("[data-bigmac]").forEach((el) => (el.textContent = usd(CONFIG.bigMacUsd)));
 
-// Buy + copy CA once the mint is set
-if (CONFIG.tokenMint) {
+// Contract address: from config, or found by /api/stats from the creator's launch.
+let caSet = false;
+function setMint(mint) {
+  if (!mint || caSet) return;
+  caSet = true;
+  const btn = $("#copy-ca");
+  btn.disabled = false;
+  btn.setAttribute("aria-label", `Copy contract address ${mint}`);
+  $("#ca-text").textContent = mint;
+  $("#ca-copy").textContent = "Copy";
+  $("#ca-hint").hidden = false;
   const buy = $("#buy");
-  buy.textContent = "Buy $ONEMAC";
-  buy.href = `https://jup.ag/swap/SOL-${CONFIG.tokenMint}`;
-  buy.target = "_blank";
-  buy.rel = "noopener";
-  const copy = $("#copy-ca");
-  copy.hidden = false;
-  $("#ca-short").textContent = `${CONFIG.tokenMint.slice(0, 4)}…${CONFIG.tokenMint.slice(-4)}`;
-  copy.setAttribute("aria-label", `Copy contract address ${CONFIG.tokenMint}`);
-  copy.addEventListener("click", async () => {
-    const label = copy.querySelector(".copy-label");
+  buy.href = `https://pump.fun/coin/${mint}`;
+  buy.hidden = false;
+  btn.addEventListener("click", async () => {
+    let ok = true;
     try {
-      await navigator.clipboard.writeText(CONFIG.tokenMint);
-      label.textContent = "Copied";
+      await navigator.clipboard.writeText(mint);
     } catch {
-      label.textContent = "Copy failed";
+      ok = false;
     }
-    setTimeout(() => (label.textContent = "Copy CA"), 1600);
+    btn.classList.toggle("copied", ok);
+    $("#ca-copy").textContent = ok ? "Copied ✓" : "Copy failed";
+    $("#ca-hint").textContent = ok ? "Copied to clipboard" : "Select and copy the address";
+    setTimeout(() => {
+      btn.classList.remove("copied");
+      $("#ca-copy").textContent = "Copy";
+      $("#ca-hint").textContent = "Click to copy";
+    }, 1800);
   });
 }
+setMint(CONFIG.tokenMint);
 
 // Live counter
 function countUp(el, to, fmt) {
@@ -57,6 +67,7 @@ async function loadStats() {
   try {
     const res = await fetch("/api/stats");
     const s = await res.json();
+    setMint(s.mint);
     setStat("#price", usd(s.bigMacUsd ?? CONFIG.bigMacUsd));
     if (!s.live) {
       setStat("#macs", "0");
@@ -71,7 +82,7 @@ async function loadStats() {
     countUp($("#fees"), s.feesUsd, usd);
     countUp($("#inflows"), s.inflows, int);
     const note = $("#counter-note");
-    note.textContent = "Read live from the fee wallet on Solana. ";
+    note.textContent = "Creator fees, read live from the fee wallet on Solana. ";
     const a = document.createElement("a");
     a.href = `https://solscan.io/account/${s.wallet}`;
     a.target = "_blank";

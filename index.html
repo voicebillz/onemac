@@ -31,11 +31,12 @@
       <h1 id="hero-title">$ONEMAC</h1>
       <p class="lede">Every trade buys a Big Mac for someone without a home.</p>
       <div class="actions">
-        <a class="btn btn-primary" id="buy" href="#how" data-launch>Launching soon</a>
-        <button class="btn btn-ghost" id="copy-ca" type="button" hidden>
-          <span class="mono" id="ca-short"></span><span class="copy-label">Copy CA</span>
+        <button class="ca" id="copy-ca" type="button" disabled aria-describedby="ca-hint">
+          <span class="ca-k">CA</span><span class="mono ca-v" id="ca-text">Contract address appears at launch</span><span class="ca-copy" id="ca-copy" aria-hidden="true"></span>
         </button>
+        <a class="btn btn-primary" id="buy" href="https://pump.fun" target="_blank" rel="noopener" hidden>Buy on pump.fun</a>
       </div>
+      <p class="ca-hint" id="ca-hint" hidden>Click to copy</p>
     </section>
 
     <section class="counter" aria-labelledby="counter-title">
@@ -46,7 +47,7 @@
         <div><dt>Fee payments</dt><dd id="inflows" aria-busy="true"><span class="sk sk-num" aria-hidden="true"></span></dd></div>
         <div><dt>Per Big Mac</dt><dd id="price" aria-busy="true"><span class="sk sk-num" aria-hidden="true"></span></dd></div>
       </dl>
-      <p class="note" id="counter-note">Read live from the fee wallet on Solana.</p>
+      <p class="note" id="counter-note">Creator fees, read live from the fee wallet on Solana.</p>
     </section>
 
     <section class="calc" aria-labelledby="calc-title">
@@ -96,7 +97,7 @@
       <h2 id="how-title">How it works</h2>
       <ol class="steps">
         <li><span class="n mono">01</span><h3>You trade $ONEMAC</h3><p>Buy or sell against <span data-pair>MCD</span>, McDonald's tokenized stock on Solana.</p></li>
-        <li><span class="n mono">02</span><h3><span data-fee>3</span>% goes to the fee wallet</h3><p>Taken automatically on every trade. Public and on-chain.</p></li>
+        <li><span class="n mono">02</span><h3><span data-fee>3</span>% creator fee</h3><p>Taken by pump.fun on every trade and paid out in MCD. Public and on-chain.</p></li>
         <li><span class="n mono">03</span><h3>Fees are routed to Big Macs</h3><p>Ordered from McDonald's restaurants worldwide through the big delivery apps.</p></li>
         <li><span class="n mono">04</span><h3>Delivered to people in need</h3><p>Hot meals for people experiencing homelessness, counted live above.</p></li>
       </ol>

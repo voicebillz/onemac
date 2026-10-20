@@ -82,31 +82,64 @@ async function prices(mints) {
   return out;
 }
 
+const PUMP_PROGRAM = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P";
+// pump.fun bonding curve, PumpSwap and pump fee-sharing programs: creator fees are paid out by these.
+const FEE_PROGRAMS = [PUMP_PROGRAM, "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA", "pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ"];
+const fromPump = (tx) => (tx.meta.logMessages || []).some((l) => FEE_PROGRAMS.some((id) => l.startsWith(`Program ${id} invoke`)));
+
+async function transactions(wallet) {
+  const { sigs, partial } = await signatures(wallet);
+  const txs = [];
+  for (let i = 0; i < sigs.length; i += CONCURRENCY) {
+    const batch = await Promise.all(
+      sigs.slice(i, i + CONCURRENCY).map((s) =>
+        rpc("getTransaction", [s, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0 }]).catch(() => null),
+      ),
+    );
+    for (const tx of batch) if (tx?.meta && !tx.meta.err) txs.push(tx);
+  }
+  return { txs, partial };
+}
+
+// The newest pump.fun create transaction signed by the creator gives the coin's mint.
+function findMint(txs, creator) {
+  for (const tx of txs) {
+    const logs = tx.meta.logMessages || [];
+    if (!logs.some((l) => l.includes(PUMP_PROGRAM)) || !logs.some((l) => /Instruction: Create/.test(l))) continue;
+    const signer = tx.transaction.message.accountKeys.find((k) => k.signer)?.pubkey;
+    if (signer !== creator) continue;
+    const pre = new Set((tx.meta.preTokenBalances || []).map((b) => b.mint));
+    const fresh = (tx.meta.postTokenBalances || []).map((b) => b.mint).filter((m) => !pre.has(m));
+    const mint = fresh.find((m) => m.endsWith("pump")) || fresh[0];
+    if (mint) return mint;
+  }
+  return "";
+}
+
 export default async function handler(req, res) {
-  const wallet = process.env.FEE_WALLET || CONFIG.feeWallet;
-  const base = { feePct: CONFIG.feePct, bigMacUsd: CONFIG.bigMacUsd };
+  const creator = process.env.CREATOR_WALLET || CONFIG.creatorWallet;
+  const wallet = process.env.FEE_WALLET || CONFIG.feeWallet || creator;
+  const base = { feePct: CONFIG.feePct, bigMacUsd: CONFIG.bigMacUsd, mint: CONFIG.tokenMint };
   if (!wallet || !ADDR.test(wallet)) {
     res.setHeader("Cache-Control", "s-maxage=60");
     return res.status(200).json({ ...base, live: false });
   }
   try {
-    const { sigs, partial } = await signatures(wallet);
-    const perTx = [];
-    for (let i = 0; i < sigs.length; i += CONCURRENCY) {
-      const batch = await Promise.all(
-        sigs.slice(i, i + CONCURRENCY).map((s) =>
-          rpc("getTransaction", [s, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0 }]).catch(() => null),
-        ),
-      );
-      for (const tx of batch) if (tx?.meta && !tx.meta.err) perTx.push(deltas(tx, wallet));
+    const { txs, partial } = await transactions(wallet);
+    let mint = CONFIG.tokenMint;
+    if (!mint && creator && ADDR.test(creator)) {
+      mint = findMint(creator === wallet ? txs : (await transactions(creator)).txs, creator);
     }
+    // Only pump.fun fee payouts count: plain deposits into the wallet are not fees.
+    const perTx = txs.filter(fromPump).map((tx) => deltas(tx, wallet));
     const mints = new Set(perTx.flatMap((d) => Object.keys(d)));
     const px = await prices(mints);
-    // Only transactions that leave the wallet richer count as fees in;
-    // swaps net out and Big Mac orders paid from the wallet are outflows.
+    // A pump.fun transaction that leaves the wallet richer is a fee claim (paid in the
+    // paired MCD token). Any transaction that moves $ONEMAC itself is a trade, never a fee.
     let feesUsd = 0;
     let inflows = 0;
     for (const d of perTx) {
+      if (mint && d[mint]) continue;
       const net = Object.entries(d).reduce((s, [m, amt]) => s + amt * (px[m] || 0), 0);
       if (net > 0) {
         feesUsd += net;
@@ -116,6 +149,7 @@ export default async function handler(req, res) {
     res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=3600");
     return res.status(200).json({
       ...base,
+      mint,
       live: true,
       wallet,
       feesUsd: Math.floor(feesUsd * 100) / 100,
