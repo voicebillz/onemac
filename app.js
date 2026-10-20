@@ -72,17 +72,17 @@ async function loadStats() {
     if (!s.live) {
       setStat("#macs", "0");
       setStat("#fees", usd(0));
-      setStat("#inflows", "0");
+      setStat("#inflows", "0 SOL");
       $("#counter-note").textContent =
-        s.error ? "Solana RPC is busy. Retrying in a minute." : "The counter goes live at launch.";
+        s.error ? "Solana RPC is busy. Retrying in a minute." : "Counter is warming up. Check back in a minute.";
       if (s.error) setTimeout(loadStats, 60_000);
       return;
     }
     countUp($("#macs"), s.bigMacs, int);
     countUp($("#fees"), s.feesUsd, usd);
-    countUp($("#inflows"), s.inflows, int);
+    setStat("#inflows", `${(s.unclaimedSol ?? 0).toLocaleString("en-US", { maximumFractionDigits: 4 })} SOL`);
     const note = $("#counter-note");
-    note.textContent = "Creator fees, read live from the fee wallet on Solana. ";
+    note.textContent = "Creator fees (claimed + waiting in the pump.fun vault), read live on Solana. ";
     const a = document.createElement("a");
     a.href = `https://solscan.io/account/${s.wallet}`;
     a.target = "_blank";
