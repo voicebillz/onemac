@@ -2,8 +2,8 @@
 
 One-page site for the $ONEMAC memecoin on Solana. Plain HTML/CSS/JS on Vercel, no build step.
 
-- `config.js`: contract address, creator wallet and its pump.fun fee vaults, pair, fee %, Big Mac price.
-  Big Macs = (creator fees claimed to the creator wallet + unclaimed fees in the vaults) ÷ Big Mac price.
+- `config.js`: contract address, creator wallet, fee token (MCDx) and the creator's pump.fun fee vaults, fee %, Big Mac price.
+  Big Macs = (MCDx fees claimed to the creator wallet + unclaimed MCDx in the vaults) × MCDx price ÷ Big Mac price.
 - `api/stats.js`: live Big Mac counter (Vercel function). Reads the fee wallet's history from a free
   Solana RPC, values each net inflow at today's Jupiter price, divides by the Big Mac price. Cached 5 min.
   Optional Vercel env vars: `CREATOR_WALLET`, `FEE_WALLET` (override config), `RPC_URL` (e.g. a free Helius key), `MAX_TX`.

@@ -72,7 +72,7 @@ async function loadStats() {
     if (!s.live) {
       setStat("#macs", "0");
       setStat("#fees", usd(0));
-      setStat("#inflows", "0 SOL");
+      setStat("#inflows", `0 ${s.feeSymbol || CONFIG.pairSymbol}`);
       $("#counter-note").textContent =
         s.error ? "Solana RPC is busy. Retrying in a minute." : "Counter is warming up. Check back in a minute.";
       if (s.error) setTimeout(loadStats, 60_000);
@@ -80,7 +80,7 @@ async function loadStats() {
     }
     countUp($("#macs"), s.bigMacs, int);
     countUp($("#fees"), s.feesUsd, usd);
-    setStat("#inflows", `${(s.unclaimedSol ?? 0).toLocaleString("en-US", { maximumFractionDigits: 4 })} SOL`);
+    setStat("#inflows", `${(s.unclaimed ?? 0).toLocaleString("en-US", { maximumFractionDigits: 4 })} ${s.feeSymbol || CONFIG.pairSymbol}`);
     const note = $("#counter-note");
     note.textContent = "Creator fees (claimed + waiting in the pump.fun vault), read live on Solana. ";
     const a = document.createElement("a");

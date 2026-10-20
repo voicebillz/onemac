@@ -116,28 +116,25 @@ function findMint(txs, creator) {
   return "";
 }
 
-// Creator fees not yet claimed: SOL in the bonding-curve vault (above its rent reserve)
-// plus wrapped SOL in the PumpSwap vault.
-const RENT_EXEMPT_EMPTY = 890880;
+// Creator fees not yet claimed: balances of the fee token (MCDx) in the creator's
+// pump.fun vaults (bonding curve now, PumpSwap after graduation).
 async function unclaimed() {
-  const { curve, pumpswap } = CONFIG.creatorVaults || {};
-  const keys = [curve, pumpswap].filter((a) => a && ADDR.test(a));
+  const keys = Object.values(CONFIG.creatorVaults || {}).filter((a) => a && ADDR.test(a));
   if (!keys.length) return 0;
   const { value } = await rpc("getMultipleAccounts", [keys, { encoding: "jsonParsed" }]);
-  let sol = 0;
-  keys.forEach((k, i) => {
-    const acc = value[i];
-    if (!acc) return;
-    if (k === curve) sol += Math.max(0, acc.lamports - RENT_EXEMPT_EMPTY) / 1e9;
-    else sol += Number(acc.data?.parsed?.info?.tokenAmount?.uiAmountString || 0);
-  });
-  return sol;
+  return value.reduce((sum, acc) => sum + Number(acc?.data?.parsed?.info?.tokenAmount?.uiAmountString || 0), 0);
 }
 
 export default async function handler(req, res) {
   const creator = process.env.CREATOR_WALLET || CONFIG.creatorWallet;
   const wallet = process.env.FEE_WALLET || CONFIG.feeWallet || creator;
-  const base = { feePct: CONFIG.feePct, bigMacUsd: CONFIG.bigMacUsd, mint: CONFIG.tokenMint };
+  const feeMint = CONFIG.feeMint || SOL_MINT;
+  const base = {
+    feePct: CONFIG.feePct,
+    bigMacUsd: CONFIG.bigMacUsd,
+    mint: CONFIG.tokenMint,
+    feeSymbol: CONFIG.pairSymbol,
+  };
   if (!wallet || !ADDR.test(wallet)) {
     res.setHeader("Cache-Control", "s-maxage=60");
     return res.status(200).json({ ...base, live: false });
@@ -150,22 +147,22 @@ export default async function handler(req, res) {
     }
     // Only pump.fun fee payouts count: plain deposits into the wallet are not fees.
     const perTx = txs.filter(fromPump).map((tx) => deltas(tx, wallet));
-    const px = await prices(new Set([SOL_MINT]));
-    const unclaimedSol = await unclaimed();
-    // A pump.fun transaction that leaves the wallet richer is a fee claim (paid in the
-    // paired MCD token). Any transaction that moves $ONEMAC itself is a trade, never a fee.
-    let feesUsd = 0;
+    const px = await prices(new Set([SOL_MINT, feeMint]));
+    const feePrice = px[feeMint] || 0;
+    const unclaimedAmt = await unclaimed();
+    // A pump.fun transaction that pays the wallet in the fee token (plus at most some SOL
+    // for rent) is a fee claim. Anything that moves $ONEMAC or another token is a trade.
+    let claimedUsd = 0;
     let inflows = 0;
     for (const d of perTx) {
-      // Creator fees are paid in SOL; anything that moves another token is a trade.
-      if (Object.keys(d).some((m) => m !== SOL_MINT)) continue;
+      if (!(feeMint in d) || Object.keys(d).some((m) => m !== feeMint && m !== SOL_MINT)) continue;
       const net = Object.entries(d).reduce((s, [m, amt]) => s + amt * (px[m] || 0), 0);
       if (net > 0) {
-        feesUsd += net;
+        claimedUsd += net;
         inflows++;
       }
     }
-    feesUsd += unclaimedSol * (px[SOL_MINT] || 0);
+    const feesUsd = claimedUsd + unclaimedAmt * feePrice;
     res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=3600");
     return res.status(200).json({
       ...base,
@@ -175,8 +172,8 @@ export default async function handler(req, res) {
       feesUsd: Math.floor(feesUsd * 100) / 100,
       bigMacs: Math.floor(feesUsd / CONFIG.bigMacUsd),
       inflows,
-      claimedUsd: Math.floor((feesUsd - unclaimedSol * (px[SOL_MINT] || 0)) * 100) / 100,
-      unclaimedSol: Math.floor(unclaimedSol * 1e4) / 1e4,
+      claimedUsd: Math.floor(claimedUsd * 100) / 100,
+      unclaimed: Math.floor(unclaimedAmt * 1e4) / 1e4,
       partial,
       updatedAt: new Date().toISOString(),
     });
