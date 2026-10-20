@@ -52,24 +52,43 @@
     <section class="calc" aria-labelledby="calc-title">
       <h2 id="calc-title">How many Big Macs is your trade?</h2>
       <div class="calc-box">
-        <label class="calc-in" for="amount">
-          <span class="label">You trade</span>
-          <span class="field"><span class="cur" aria-hidden="true">$</span><input id="amount" type="text" inputmode="decimal" autocomplete="off" value="1,000" aria-describedby="calc-help"></span>
-        </label>
-        <div class="chips" role="group" aria-label="Quick amounts">
-          <button type="button" data-amt="100">$100</button>
-          <button type="button" data-amt="1000">$1k</button>
-          <button type="button" data-amt="10000">$10k</button>
-          <button type="button" data-amt="100000">$100k</button>
+        <div class="calc-top">
+          <label class="calc-in" for="amount">
+            <span class="label">Total traded</span>
+            <span class="field"><span class="cur" aria-hidden="true">$</span><input id="amount" type="text" inputmode="decimal" autocomplete="off" value="100,000" aria-describedby="calc-help"></span>
+          </label>
+          <div class="chips" role="group" aria-label="Quick amounts">
+            <button type="button" data-amt="10000">$10k</button>
+            <button type="button" data-amt="100000">$100k</button>
+            <button type="button" data-amt="1000000">$1M</button>
+            <button type="button" data-amt="10000000">$10M</button>
+          </div>
         </div>
-        <input id="slider" type="range" min="0" max="1000" value="500" aria-label="Trade size">
-        <div class="calc-out">
-          <div><span class="label"><span data-fee>3</span>% fee</span><span class="val mono" id="calc-fee">$30.00</span></div>
-          <div class="arrow" aria-hidden="true">→</div>
-          <div><span class="label">Big Macs</span><span class="val mono accent" id="calc-macs">5</span></div>
-        </div>
-        <div class="burgers" id="burgers" aria-hidden="true"></div>
-        <p class="note" id="calc-help">Buys and sells both count. Priced at <span data-bigmac>$5.79</span> per Big Mac.</p>
+        <dl class="readout" aria-live="off">
+          <div><dt>Traded</dt><dd class="mono" id="r-traded">$0</dd></div>
+          <div><dt><span data-fee>3</span>% fee</dt><dd class="mono" id="r-fee">$0</dd></div>
+          <div><dt>Big Macs</dt><dd class="mono accent" id="r-macs">0</dd></div>
+        </dl>
+        <figure class="chart" aria-label="Chart: daily trading volume and Big Macs bought, growing over 30 days">
+          <svg id="chart" viewBox="0 0 600 220" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="g-area" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="currentColor" stop-opacity=".28"/>
+                <stop offset="1" stop-color="currentColor" stop-opacity="0"/>
+              </linearGradient>
+              <clipPath id="reveal"><rect id="reveal-rect" x="0" y="0" width="0" height="220"/></clipPath>
+            </defs>
+            <g class="grid"><line x1="0" y1="55" x2="600" y2="55"/><line x1="0" y1="110" x2="600" y2="110"/><line x1="0" y1="165" x2="600" y2="165"/><line x1="0" y1="219.5" x2="600" y2="219.5"/></g>
+            <g clip-path="url(#reveal)">
+              <g id="bars" class="bars"></g>
+              <path id="area" class="area" d=""/>
+              <path id="line" class="line" d="" vector-effect="non-scaling-stroke"/>
+            </g>
+          </svg>
+          <span class="head" id="head" aria-hidden="true">🍔</span>
+          <figcaption class="legend"><span><i class="k-bar"></i>Daily volume</span><span><i class="k-line"></i>Big Macs bought</span><span class="day mono" id="r-day">Day 0</span></figcaption>
+        </figure>
+        <p class="note" id="calc-help">Example spread over 30 days, not a forecast. Priced at <span data-bigmac>$5.79</span> per Big Mac.</p>
       </div>
     </section>
 
@@ -87,14 +106,14 @@
       <h2 id="where-title">Ordered through</h2>
       <p class="sub">McDonald's restaurants across the world, via the platforms that deliver them.</p>
       <ul class="logos">
-        <li><img src="/assets/logos/ubereats.svg" alt="" width="28" height="28"><span>Uber Eats</span></li>
-        <li><img src="/assets/logos/doordash.svg" alt="" width="28" height="28"><span>DoorDash</span></li>
-        <li><img src="/assets/logos/deliveroo.svg" alt="" width="28" height="28"><span>Deliveroo</span></li>
-        <li><img src="/assets/logos/justeat.svg" alt="" width="28" height="28"><span>Just Eat</span></li>
-        <li><img class="wide" src="/assets/logos/grubhub.svg" alt="" width="72" height="20"><span>Grubhub</span></li>
-        <li><img src="/assets/logos/foodpanda.svg" alt="" width="28" height="28"><span>foodpanda</span></li>
-        <li><img src="/assets/logos/glovo.svg" alt="" width="28" height="28"><span>Glovo</span></li>
-        <li><img src="/assets/logos/swiggy.svg" alt="" width="28" height="28"><span>Swiggy</span></li>
+        <li><img src="/assets/logos/ubereats.png" alt="" width="40" height="40"><span>Uber Eats</span></li>
+        <li><img src="/assets/logos/wolt.png" alt="" width="40" height="40"><span>Wolt</span></li>
+        <li><img src="/assets/logos/doordash.svg" alt="" width="40" height="40"><span>DoorDash</span></li>
+        <li><img src="/assets/logos/deliveroo.png" alt="" width="40" height="40"><span>Deliveroo</span></li>
+        <li><img src="/assets/logos/justeat.png" alt="" width="40" height="40"><span>Just Eat</span></li>
+        <li><img src="/assets/logos/grubhub.png" alt="" width="40" height="40"><span>Grubhub</span></li>
+        <li><img src="/assets/logos/foodpanda.png" alt="" width="40" height="40"><span>foodpanda</span></li>
+        <li><img src="/assets/logos/glovo.png" alt="" width="40" height="40"><span>Glovo</span></li>
       </ul>
     </section>
 
