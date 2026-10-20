@@ -6,7 +6,7 @@ export const CONFIG = {
   // Wallet that receives the 3% fee. The Big Mac counter reads its incoming transfers.
   feeWallet: "",
   // Pool pair (McDonald's tokenized stock on Solana).
-  pairSymbol: "MCDx",
+  pairSymbol: "MCD",
   feePct: 3,
   // Price used to turn fees into Big Macs (USD).
   bigMacUsd: 5.79,
