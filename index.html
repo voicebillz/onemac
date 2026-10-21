@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>$ONEMAC: every trade buys a Big Mac</title>
-  <meta name="description" content="$ONEMAC is a Solana memecoin on pump.fun, paired with McDonald's tokenized stock. 3% of every trade buys Big Macs for people experiencing homelessness.">
+  <meta name="description" content="$ONEMAC is a Solana memecoin on pump.fun. Its creator rewards buy Big Macs for people experiencing homelessness.">
   <meta name="theme-color" content="#0b0b0c">
   <link rel="canonical" href="https://onemac.xyz/">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://onemac.xyz/">
   <meta property="og:title" content="$ONEMAC: every trade buys a Big Mac">
-  <meta property="og:description" content="3% of every $ONEMAC trade buys Big Macs for people experiencing homelessness. Live counter on-chain.">
+  <meta property="og:description" content="$ONEMAC creator rewards buy Big Macs for people experiencing homelessness. Live counter on-chain.">
   <meta property="og:image" content="https://onemac.xyz/assets/coin-1024.png">
   <meta name="twitter:card" content="summary">
   <link rel="icon" type="image/png" href="/assets/favicon-64.png">
@@ -27,9 +27,9 @@
 
     <section class="hero" aria-labelledby="hero-title">
       <img class="coin" src="/assets/coin-512.png" srcset="/assets/coin-512.png 1x, /assets/coin-1024.png 2x" width="260" height="260" alt="$ONEMAC coin">
-      <p class="eyebrow"><span class="dot" aria-hidden="true"></span>Solana · paired with <span data-pair>MCD</span></p>
+      <p class="eyebrow"><span class="dot" aria-hidden="true"></span>Solana · paired with <span data-pair>SOL</span></p>
       <h1 id="hero-title">$ONEMAC</h1>
-      <p class="lede">Every trade buys a Big Mac for someone without a home.</p>
+      <p class="lede">Creator rewards buy Big Macs for people without a home.</p>
       <div class="actions">
         <button class="ca" id="copy-ca" type="button" disabled aria-describedby="ca-hint">
           <span class="ca-k">CA</span><span class="mono ca-v" id="ca-text">Contract address appears at launch</span><span class="ca-copy" id="ca-copy" aria-hidden="true"></span>
@@ -43,11 +43,27 @@
       <p class="label" id="counter-title">Big Macs bought so far</p>
       <div class="big" id="macs" aria-live="polite" aria-busy="true"><span class="sk sk-big" aria-hidden="true"></span></div>
       <dl class="stats">
-        <div><dt>Fees routed</dt><dd id="fees" aria-busy="true"><span class="sk sk-num" aria-hidden="true"></span></dd></div>
+        <div><dt>Creator rewards</dt><dd id="fees" aria-busy="true"><span class="sk sk-num" aria-hidden="true"></span></dd></div>
         <div><dt>Not yet claimed</dt><dd id="inflows" aria-busy="true"><span class="sk sk-num" aria-hidden="true"></span></dd></div>
         <div><dt>Per Big Mac</dt><dd id="price" aria-busy="true"><span class="sk sk-num" aria-hidden="true"></span></dd></div>
       </dl>
-      <p class="note" id="counter-note">Creator fees, read live from the fee wallet on Solana.</p>
+      <p class="note" id="counter-note">Creator rewards since launch, read live on Solana.</p>
+    </section>
+
+    <section class="treasury" aria-labelledby="treasury-title">
+      <h2 id="treasury-title">Treasury</h2>
+      <p class="sub">Everything the $ONEMAC wallet holds, live.</p>
+      <div class="treasury-box">
+        <div class="t-head">
+          <div><span class="label">Total value</span><div class="t-usd mono" id="t-usd" aria-busy="true"><span class="sk sk-num" aria-hidden="true"></span></div></div>
+          <div class="t-macs"><span class="label">Worth in Big Macs</span><div class="t-usd mono accent" id="t-macs" aria-busy="true"><span class="sk sk-num" aria-hidden="true"></span></div></div>
+        </div>
+        <ul class="t-list" id="t-list" aria-busy="true">
+          <li><span class="sk sk-num" aria-hidden="true"></span><span class="sk sk-num" aria-hidden="true"></span></li>
+          <li><span class="sk sk-num" aria-hidden="true"></span><span class="sk sk-num" aria-hidden="true"></span></li>
+        </ul>
+        <p class="note" id="t-note"></p>
+      </div>
     </section>
 
     <section class="calc" aria-labelledby="calc-title">
@@ -67,7 +83,7 @@
         </div>
         <dl class="readout" aria-live="off">
           <div><dt>Traded</dt><dd class="mono" id="r-traded">$0</dd></div>
-          <div><dt><span data-fee>3</span>% fee</dt><dd class="mono" id="r-fee">$0</dd></div>
+          <div><dt>Creator rewards</dt><dd class="mono" id="r-fee">$0</dd></div>
           <div><dt>Big Macs</dt><dd class="mono accent" id="r-macs">0</dd></div>
         </dl>
         <figure class="chart" aria-label="Chart: daily trading volume and Big Macs bought, growing over 30 days">
@@ -89,16 +105,16 @@
           <span class="head" id="head" aria-hidden="true">🍔</span>
           <figcaption class="legend"><span><i class="k-bar"></i>Daily volume</span><span><i class="k-line"></i>Big Macs bought</span><span class="day mono" id="r-day">Day 0</span></figcaption>
         </figure>
-        <p class="note" id="calc-help">Example spread over 30 days, not a forecast. Priced at <span data-bigmac>$5.79</span> per Big Mac.</p>
+        <p class="note" id="calc-help">Example over 30 days at pump.fun's current creator reward rate (<span id="rate">0.30%</span>), not a forecast. <span data-bigmac>$5.79</span> per Big Mac.</p>
       </div>
     </section>
 
     <section class="how" id="how" aria-labelledby="how-title">
       <h2 id="how-title">How it works</h2>
       <ol class="steps">
-        <li><span class="n mono">01</span><h3>You trade $ONEMAC</h3><p>Buy or sell against <span data-pair>MCD</span>, McDonald's tokenized stock, on pump.fun.</p></li>
-        <li><span class="n mono">02</span><h3><span data-fee>3</span>% creator fee</h3><p>Taken by pump.fun on every trade and paid out in MCD. Public and on-chain.</p></li>
-        <li><span class="n mono">03</span><h3>Fees are routed to Big Macs</h3><p>Ordered from McDonald's restaurants worldwide through the big delivery apps.</p></li>
+        <li><span class="n mono">01</span><h3>You trade $ONEMAC</h3><p>Buy or sell with <span data-pair>SOL</span> on pump.fun.</p></li>
+        <li><span class="n mono">02</span><h3>Creator rewards</h3><p>pump.fun pays the creator a share of every trade, in SOL. Public and on-chain.</p></li>
+        <li><span class="n mono">03</span><h3>Rewards are routed to Big Macs</h3><p>Ordered from McDonald's restaurants worldwide through the big delivery apps.</p></li>
         <li><span class="n mono">04</span><h3>Delivered to people in need</h3><p>Hot meals for people experiencing homelessness, counted live above.</p></li>
       </ol>
     </section>

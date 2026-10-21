@@ -1,22 +1,21 @@
 // $ONEMAC site settings. Shared by the page (/config.js) and the live counter (/api/stats).
 export const CONFIG = {
-  // $ONEMAC on pump.fun (contract address).
-  tokenMint: "FkCM5CDrsqj6zbhVAS8ut4yr5Z1eBsFzakq4QmvQpump",
-  // Wallet that launched $ONEMAC; pump.fun pays the creator fees to it when claimed.
+  // $ONEMAC on pump.fun (contract address), paired with SOL.
+  tokenMint: "ERChimxArJHLdJbWy1G2Tv7ztUL3MZ5SZg8JAukrpump",
+  launchedAt: "2026-10-21T03:45:30Z",
+  pairSymbol: "SOL",
+  // Wallet that launched $ONEMAC; pump.fun pays the creator rewards to it when claimed.
   creatorWallet: "1ooAUr8e789HTrXnUwWqY1aGUJGpZhes2nvufb1T9UY",
-  // Pair: McDonald's xStock (MCDx). Creator fees are paid in this token.
-  pairSymbol: "MCD",
-  feeMint: "XsqE9cRRpzxcGKDXj1BJ7Xmg4GRhZoyY1KpmGSxAWT2",
-  // Where unclaimed creator fees wait: the MCDx token accounts of the creator's
-  // pump.fun vault (bonding curve) and PumpSwap vault (after graduation).
+  // Where unclaimed creator rewards wait (PDAs of creatorWallet): the pump.fun vault (SOL)
+  // and the PumpSwap vault (wrapped SOL, after graduation). The baseline is what sat in the
+  // pump.fun vault before this launch, so rewards from earlier coins are not counted.
   creatorVaults: {
-    curve: "4pmTpySRn7hQEXv18gDrTG4ez4woBN7ihJp5hD6P8jL3",
-    pumpswap: "EqRbxAwbpBd84mFjt8qqTcPH9jz1k42cFiej85GYdM4z",
+    curve: "Ef7Dpn9igXKq1pfocNJoDupCPvynKEh2VbFDb9ttuVNC",
+    curveBaselineLamports: 650240,
+    pumpswap: "4XbNC22VgNN5431G4mojbeVkbxcD3Jvt3Z5EXjVUEeUp",
   },
-  // Optional: a different wallet that receives the fees (defaults to creatorWallet).
-  feeWallet: "",
-  // Creator fee on every trade.
-  feePct: 3,
-  // Price used to turn fees into Big Macs (USD).
+  // Treasury: everything this wallet holds is shown on the page.
+  treasuryWallet: "1ooAUr8e789HTrXnUwWqY1aGUJGpZhes2nvufb1T9UY",
+  // Price used to turn rewards into Big Macs (USD).
   bigMacUsd: 5.79,
 };

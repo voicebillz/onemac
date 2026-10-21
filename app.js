@@ -7,7 +7,6 @@ const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // Static settings into the copy
 document.querySelectorAll("[data-pair]").forEach((el) => (el.textContent = CONFIG.pairSymbol));
-document.querySelectorAll("[data-fee]").forEach((el) => (el.textContent = CONFIG.feePct));
 document.querySelectorAll("[data-bigmac]").forEach((el) => (el.textContent = usd(CONFIG.bigMacUsd)));
 
 // Contract address: from config, or found by /api/stats from the creator's launch.
@@ -57,6 +56,43 @@ function countUp(el, to, fmt) {
   requestAnimationFrame(tick);
 }
 
+const amt = (n) => n.toLocaleString("en-US", { maximumFractionDigits: n >= 1000 ? 0 : 4 });
+function link(href, text) {
+  const a = document.createElement("a");
+  a.href = href;
+  a.target = "_blank";
+  a.rel = "noopener";
+  a.textContent = text;
+  return a;
+}
+
+// Treasury: every asset in the wallet, biggest first.
+function renderTreasury(t) {
+  if (!t) return;
+  countUp($("#t-usd"), t.usd, usd);
+  countUp($("#t-macs"), t.bigMacs, int);
+  const list = $("#t-list");
+  list.removeAttribute("aria-busy");
+  list.textContent = "";
+  for (const a of t.assets) {
+    const li = document.createElement("li");
+    const name = document.createElement("span");
+    name.className = "t-sym";
+    name.textContent = a.symbol;
+    const qty = document.createElement("span");
+    qty.className = "mono t-amt";
+    qty.textContent = amt(a.amount);
+    const val = document.createElement("span");
+    val.className = "mono t-val";
+    val.textContent = usd(a.usd);
+    li.append(name, qty, val);
+    list.append(li);
+  }
+  const note = $("#t-note");
+  note.textContent = "";
+  note.append(link(`https://solscan.io/account/${t.wallet}`, "View treasury wallet"));
+}
+
 function setStat(id, text) {
   const el = $(id);
   el.removeAttribute("aria-busy");
@@ -72,7 +108,7 @@ async function loadStats() {
     if (!s.live) {
       setStat("#macs", "0");
       setStat("#fees", usd(0));
-      setStat("#inflows", `0 ${s.feeSymbol || CONFIG.pairSymbol}`);
+      setStat("#inflows", "0 SOL");
       $("#counter-note").textContent =
         s.error ? "Solana RPC is busy. Retrying in a minute." : "Counter is warming up. Check back in a minute.";
       if (s.error) setTimeout(loadStats, 60_000);
@@ -80,15 +116,12 @@ async function loadStats() {
     }
     countUp($("#macs"), s.bigMacs, int);
     countUp($("#fees"), s.feesUsd, usd);
-    setStat("#inflows", `${(s.unclaimed ?? 0).toLocaleString("en-US", { maximumFractionDigits: 4 })} ${s.feeSymbol || CONFIG.pairSymbol}`);
+    setStat("#inflows", `${amt(s.unclaimedSol ?? 0)} SOL`);
     const note = $("#counter-note");
-    note.textContent = "Creator fees (claimed + waiting in the pump.fun vault), read live on Solana. ";
-    const a = document.createElement("a");
-    a.href = `https://solscan.io/account/${s.wallet}`;
-    a.target = "_blank";
-    a.rel = "noopener";
-    a.textContent = "View wallet";
-    note.append(a);
+    note.textContent = "Creator rewards since launch (claimed + waiting in the pump.fun vault), read live on Solana. ";
+    note.append(link(`https://solscan.io/account/${s.wallet}`, "View wallet"));
+    if (s.creatorFeeBps) setRate(s.creatorFeeBps);
+    renderTreasury(s.treasury);
   } catch {
     $("#counter-note").textContent = "Could not reach the counter. Retrying in a minute.";
     setTimeout(loadStats, 60_000);
@@ -99,6 +132,14 @@ setInterval(loadStats, 5 * 60_000);
 
 // Calculator: the chart grows by itself over 30 example days, holds, then replays.
 const amount = $("#amount");
+// Live pump.fun creator reward rate (basis points); /api/stats reads it from the newest trade.
+let rateBps = 30;
+function setRate(bps) {
+  if (bps === rateBps) return;
+  rateBps = bps;
+  $("#rate").textContent = `${(bps / 100).toFixed(2)}%`;
+  start(total);
+}
 const DAYS = 30;
 const W = 600;
 const H = 220;
@@ -156,7 +197,7 @@ function draw(p) {
   const i = Math.min(DAYS - 1, Math.floor(f));
   const prev = i > 0 ? series[i - 1].cum : 0;
   const traded = p >= 1 ? total : prev + (series[i].cum - prev) * (f - i);
-  const fee = Math.floor(traded * CONFIG.feePct) / 100;
+  const fee = Math.floor(traded * rateBps) / 10000;
   $("#r-traded").textContent = compact(traded);
   $("#r-fee").textContent = compact(fee);
   $("#r-macs").textContent = int(fee / CONFIG.bigMacUsd);
