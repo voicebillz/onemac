@@ -108,7 +108,7 @@ async function loadStats() {
     if (!s.live) {
       setStat("#macs", "0");
       setStat("#fees", usd(0));
-      setStat("#inflows", "0 SOL");
+      setStat("#inflows", "0");
       $("#counter-note").textContent =
         s.error ? "Solana RPC is busy. Retrying in a minute." : "Counter is warming up. Check back in a minute.";
       if (s.error) setTimeout(loadStats, 60_000);
@@ -116,9 +116,9 @@ async function loadStats() {
     }
     countUp($("#macs"), s.bigMacs, int);
     countUp($("#fees"), s.feesUsd, usd);
-    setStat("#inflows", `${amt(s.unclaimedSol ?? 0)} SOL`);
+    countUp($("#inflows"), s.trades ?? 0, int);
     const note = $("#counter-note");
-    note.textContent = "Creator rewards since launch (claimed + waiting in the pump.fun vault), read live on Solana. ";
+    note.textContent = `Creator rewards from every $ONEMAC trade (${amt(s.rewardsSol ?? 0)} SOL), read live on Solana. `;
     note.append(link(`https://solscan.io/account/${s.wallet}`, "View wallet"));
     if (s.creatorFeeBps) setRate(s.creatorFeeBps);
     renderTreasury(s.treasury);

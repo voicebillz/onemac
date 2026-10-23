@@ -1,7 +1,8 @@
 // Live Big Mac counter + treasury. Reads Solana through a free RPC and prices with Jupiter.
-// Creator rewards for $ONEMAC = SOL claimed to the creator wallet since launch
-// + SOL still waiting in the creator's pump.fun vaults (minus what was there before launch).
+// Creator rewards for $ONEMAC = the creator_fee pump.fun records in every trade of this coin,
+// so rewards from the creator's other coins (which share the same vault) never count.
 // Vercel's CDN caches the answer for 5 minutes.
+import { createHash } from "node:crypto";
 import { CONFIG } from "../config.js";
 
 const RPCS = [
@@ -9,11 +10,12 @@ const RPCS = [
   "https://solana-rpc.publicnode.com",
   "https://api.mainnet-beta.solana.com",
 ].filter(Boolean);
+// History and index lookups: publicnode prunes old transactions (returns empty/null)
+// and refuses token indexes, so these go to the other RPCs.
+const INDEXED = new Set(["getSignaturesForAddress", "getTransaction", "getTokenAccountsByOwner"]);
+const INDEXED_RPCS = RPCS.filter((u) => !u.includes("publicnode"));
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
-const PUMP_PROGRAM = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P";
-// pump.fun bonding curve, PumpSwap and pump fee-sharing programs pay out creator rewards.
-const FEE_PROGRAMS = [PUMP_PROGRAM, "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA", "pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ"];
 const TOKEN_PROGRAMS = ["TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"];
 const MAX_TX = Number(process.env.MAX_TX || 1500);
 const CONCURRENCY = 6;
@@ -25,7 +27,8 @@ const floor2 = (n) => Math.floor(n * 100) / 100;
 async function rpc(method, params) {
   let lastErr;
   for (let attempt = 0; attempt < 4; attempt++) {
-    const url = RPCS[attempt % RPCS.length];
+    const pool = INDEXED.has(method) ? INDEXED_RPCS : RPCS;
+    const url = pool[attempt % pool.length];
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -74,26 +77,6 @@ async function transactions(sigs) {
   return txs;
 }
 
-// Net change per mint for the wallet in one transaction (SOL and wrapped SOL both as SOL_MINT).
-function deltas(tx, wallet) {
-  const d = {};
-  const keys = tx.transaction.message.accountKeys.map((k) => (typeof k === "string" ? k : k.pubkey));
-  const i = keys.indexOf(wallet);
-  if (i >= 0) {
-    const lamports = tx.meta.postBalances[i] - tx.meta.preBalances[i];
-    if (lamports) d[SOL_MINT] = lamports / 1e9;
-  }
-  const add = (b, sign) => {
-    if (b.owner !== wallet) return;
-    d[b.mint] = (d[b.mint] || 0) + sign * Number(b.uiTokenAmount.uiAmountString || 0);
-  };
-  (tx.meta.preTokenBalances || []).forEach((b) => add(b, -1));
-  (tx.meta.postTokenBalances || []).forEach((b) => add(b, 1));
-  return d;
-}
-
-const fromPump = (tx) => (tx.meta.logMessages || []).some((l) => FEE_PROGRAMS.some((id) => l.startsWith(`Program ${id} invoke`)));
-
 async function prices(mints) {
   const out = {};
   const list = [...mints];
@@ -106,38 +89,32 @@ async function prices(mints) {
   return out;
 }
 
-// Creator rewards still in the vaults: bonding-curve vault (SOL above its pre-launch
-// balance) + PumpSwap vault (wrapped SOL, after graduation).
-async function unclaimedSol() {
-  const { curve, curveBaselineLamports = 0, pumpswap } = CONFIG.creatorVaults || {};
-  const keys = [curve, pumpswap].filter((a) => a && ADDR.test(a));
-  if (!keys.length) return 0;
-  const { value } = await rpc("getMultipleAccounts", [keys, { encoding: "jsonParsed" }]);
-  return keys.reduce((sol, k, i) => {
-    const acc = value[i];
-    if (!acc) return sol;
-    if (k === curve) return sol + Math.max(0, acc.lamports - curveBaselineLamports) / 1e9;
-    return sol + Number(acc.data?.parsed?.info?.tokenAmount?.uiAmountString || 0);
-  }, 0);
+// pump.fun TradeEvent: disc(8) mint(32) sol(8) token(8) is_buy(1) user(32) ts(8) 4×reserves(32)
+// fee_recipient(32) fee_bps(8) fee(8) creator(32) creator_fee_bps(8) creator_fee(8) …
+const TRADE_DISC = createHash("sha256").update("event:TradeEvent").digest().subarray(0, 8);
+const CREATOR_FEE_BPS_AT = 8 + 32 + 17 + 32 + 8 + 32 + 32 + 16 + 32;
+
+function tradeEvents(tx, mintBytes) {
+  const out = [];
+  for (const line of tx.meta.logMessages || []) {
+    if (!line.startsWith("Program data: ")) continue;
+    const b = Buffer.from(line.slice(14), "base64");
+    if (b.length < CREATOR_FEE_BPS_AT + 16 || !b.subarray(0, 8).equals(TRADE_DISC)) continue;
+    if (!b.subarray(8, 40).equals(mintBytes)) continue;
+    out.push({
+      creatorFeeBps: Number(b.readBigUInt64LE(CREATOR_FEE_BPS_AT)),
+      creatorFeeLamports: Number(b.readBigUInt64LE(CREATOR_FEE_BPS_AT + 8)),
+    });
+  }
+  return out;
 }
 
-// Current creator reward rate (basis points) from the newest pump.fun TradeEvent of the coin.
-async function creatorFeeBps(mint) {
-  const { sigs } = await signatures(mint, 0, 5);
-  for (const s of sigs) {
-    const tx = await rpc("getTransaction", [s, { encoding: "json", maxSupportedTransactionVersion: 0 }]).catch(() => null);
-    for (const line of tx?.meta?.logMessages || []) {
-      if (!line.startsWith("Program data: ")) continue;
-      const b = Buffer.from(line.slice(14), "base64");
-      // TradeEvent: disc(8) mint(32) sol(8) token(8) is_buy(1) user(32) ts(8) 4×reserves(32)
-      // fee_recipient(32) fee_bps(8) fee(8) creator(32) creator_fee_bps(8) creator_fee(8) …
-      if (b.length < 8 + 32 + 17 + 32 + 8 + 32 + 32 + 16 + 32 + 16) continue;
-      const off = 8 + 32 + 17 + 32 + 8 + 32 + 32 + 16 + 32;
-      const bps = Number(b.readBigUInt64LE(off));
-      if (bps > 0 && bps < 1000) return bps;
-    }
-  }
-  return null;
+const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+function base58Decode(s) {
+  let n = 0n;
+  for (const c of s) n = n * 58n + BigInt(B58.indexOf(c));
+  const hex = n.toString(16).padStart(64, "0");
+  return Buffer.from(hex, "hex");
 }
 
 // Every SOL and token balance in the treasury wallet, valued with Jupiter.
@@ -176,58 +153,49 @@ async function tokenSymbols(mints) {
 }
 
 export default async function handler(req, res) {
-  const creator = CONFIG.creatorWallet;
-  const treasuryWallet = CONFIG.treasuryWallet || creator;
-  const base = { bigMacUsd: CONFIG.bigMacUsd, mint: CONFIG.tokenMint };
-  if (!ADDR.test(creator || "") || !ADDR.test(CONFIG.tokenMint || "")) {
+  const mint = CONFIG.tokenMint;
+  const treasuryWallet = CONFIG.treasuryWallet || CONFIG.creatorWallet;
+  const base = { bigMacUsd: CONFIG.bigMacUsd, mint };
+  if (!ADDR.test(mint || "") || !ADDR.test(treasuryWallet || "")) {
     res.setHeader("Cache-Control", "s-maxage=60");
     return res.status(200).json({ ...base, live: false });
   }
   try {
-    const since = Math.floor(Date.parse(CONFIG.launchedAt || 0) / 1000) || 0;
-    const [{ sigs, partial }, vaultSol, bps, holdings] = await Promise.all([
-      signatures(creator, since),
-      unclaimedSol(),
-      creatorFeeBps(CONFIG.tokenMint).catch(() => null),
-      treasury(treasuryWallet),
-    ]);
-    const txs = await transactions(sigs);
-
-    // A pump.fun payout that only adds SOL to the creator wallet is a claim of creator
-    // rewards. Anything that also moves a token ($ONEMAC or others) is a trade, not a reward.
-    let claimedSol = 0;
-    let claims = 0;
-    for (const tx of txs.filter(fromPump)) {
-      const d = deltas(tx, creator);
-      if (Object.keys(d).some((m) => m !== SOL_MINT)) continue;
-      if ((d[SOL_MINT] || 0) > 0) {
-        claimedSol += d[SOL_MINT];
-        claims++;
+    const [{ sigs, partial }, holdings] = await Promise.all([signatures(mint), treasury(treasuryWallet)]);
+    const txs = await transactions(sigs); // newest first
+    const mintBytes = base58Decode(mint);
+    let lamports = 0;
+    let trades = 0;
+    let bps = null;
+    for (const tx of txs) {
+      for (const ev of tradeEvents(tx, mintBytes)) {
+        lamports += ev.creatorFeeLamports;
+        trades++;
+        if (bps === null) bps = ev.creatorFeeBps;
       }
     }
 
     const px = await prices(new Set([SOL_MINT, ...Object.keys(holdings)]));
     const solUsd = px[SOL_MINT]?.usd || 0;
-    const rewardsSol = claimedSol + vaultSol;
+    const rewardsSol = lamports / 1e9;
     const rewardsUsd = rewardsSol * solUsd;
 
     const symbols = await tokenSymbols(Object.keys(holdings));
     const assets = Object.entries(holdings)
-      .map(([mint, amount]) => ({ mint, symbol: symbols[mint], amount, usd: amount * (px[mint]?.usd || 0) }))
+      .map(([m, amount]) => ({ mint: m, symbol: symbols[m], amount, usd: amount * (px[m]?.usd || 0) }))
       .filter((a) => a.usd >= 0.01 || a.mint === SOL_MINT)
       .sort((a, b) => b.usd - a.usd)
       .map((a) => ({ ...a, usd: floor2(a.usd) }));
-    const treasuryUsd = assets.reduce((s, a) => s + a.usd, 0);
+    const treasuryUsd = assets.reduce((sum, a) => sum + a.usd, 0);
 
     res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=3600");
     return res.status(200).json({
       ...base,
       live: true,
-      wallet: creator,
+      wallet: CONFIG.creatorWallet,
       creatorFeeBps: bps,
-      rewardsSol: Math.floor(rewardsSol * 1e4) / 1e4,
-      unclaimedSol: Math.floor(vaultSol * 1e4) / 1e4,
-      claims,
+      rewardsSol: Math.floor(rewardsSol * 1e6) / 1e6,
+      trades,
       feesUsd: floor2(rewardsUsd),
       bigMacs: Math.floor(rewardsUsd / CONFIG.bigMacUsd),
       treasury: {
