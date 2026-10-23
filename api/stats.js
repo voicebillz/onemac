@@ -1,6 +1,6 @@
 // Live Big Mac counter + treasury. Reads Solana through a free RPC and prices with Jupiter.
-// Creator rewards for $ONEMAC = the creator_fee pump.fun records in every trade of this coin,
-// so rewards from the creator's other coins (which share the same vault) never count.
+// Creator rewards for $ONEMAC = the creator_fee pump.fun records in every trade of this coin
+// (paid in the quote token, MCDx), so the creator's other coins sharing the same vault never count.
 // Vercel's CDN caches the answer for 5 minutes.
 import { createHash } from "node:crypto";
 import { CONFIG } from "../config.js";
@@ -66,15 +66,19 @@ async function signatures(address, since = 0, limit = MAX_TX) {
 
 async function transactions(sigs) {
   const txs = [];
+  let missed = 0;
   for (let i = 0; i < sigs.length; i += CONCURRENCY) {
     const batch = await Promise.all(
       sigs.slice(i, i + CONCURRENCY).map((s) =>
-        rpc("getTransaction", [s, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0 }]).catch(() => null),
+        rpc("getTransaction", [s, { encoding: "jsonParsed", maxSupportedTransactionVersion: 1 }]).catch(() => undefined),
       ),
     );
-    for (const tx of batch) if (tx?.meta && !tx.meta.err) txs.push(tx);
+    for (const tx of batch) {
+      if (tx === undefined || tx === null) missed++;
+      else if (tx.meta && !tx.meta.err) txs.push(tx);
+    }
   }
-  return txs;
+  return { txs, missed };
 }
 
 async function prices(mints) {
@@ -84,7 +88,11 @@ async function prices(mints) {
     const res = await fetch(`https://lite-api.jup.ag/price/v3?ids=${list.slice(i, i + 50).join(",")}`);
     if (!res.ok) continue;
     const json = await res.json();
-    for (const [mint, v] of Object.entries(json)) out[mint] = { usd: Number(v?.usdPrice) || 0 };
+    for (const [mint, v] of Object.entries(json)) {
+      // xStocks use a UI multiplier: raw on-chain amounts are priced with usdPricePrescaled.
+      const usd = Number(v?.usdPrice) || 0;
+      out[mint] = { usd, raw: Number(v?.scaledUiConfig?.usdPricePrescaled) || usd };
+    }
   }
   return out;
 }
@@ -103,7 +111,7 @@ function tradeEvents(tx, mintBytes) {
     if (!b.subarray(8, 40).equals(mintBytes)) continue;
     out.push({
       creatorFeeBps: Number(b.readBigUInt64LE(CREATOR_FEE_BPS_AT)),
-      creatorFeeLamports: Number(b.readBigUInt64LE(CREATOR_FEE_BPS_AT + 8)),
+      creatorFeeRaw: Number(b.readBigUInt64LE(CREATOR_FEE_BPS_AT + 8)),
     });
   }
   return out;
@@ -162,23 +170,23 @@ export default async function handler(req, res) {
   }
   try {
     const [{ sigs, partial }, holdings] = await Promise.all([signatures(mint), treasury(treasuryWallet)]);
-    const txs = await transactions(sigs); // newest first
+    const { txs, missed } = await transactions(sigs); // newest first
     const mintBytes = base58Decode(mint);
-    let lamports = 0;
+    let raw = 0;
     let trades = 0;
     let bps = null;
     for (const tx of txs) {
       for (const ev of tradeEvents(tx, mintBytes)) {
-        lamports += ev.creatorFeeLamports;
+        raw += ev.creatorFeeRaw;
         trades++;
         if (bps === null) bps = ev.creatorFeeBps;
       }
     }
 
-    const px = await prices(new Set([SOL_MINT, ...Object.keys(holdings)]));
-    const solUsd = px[SOL_MINT]?.usd || 0;
-    const rewardsSol = lamports / 1e9;
-    const rewardsUsd = rewardsSol * solUsd;
+    const quote = CONFIG.quoteMint || SOL_MINT;
+    const px = await prices(new Set([SOL_MINT, quote, ...Object.keys(holdings)]));
+    const rewardsRaw = raw / 10 ** (CONFIG.quoteDecimals ?? 9);
+    const rewardsUsd = rewardsRaw * (px[quote]?.raw || 0);
 
     const symbols = await tokenSymbols(Object.keys(holdings));
     const assets = Object.entries(holdings)
@@ -194,7 +202,8 @@ export default async function handler(req, res) {
       live: true,
       wallet: CONFIG.creatorWallet,
       creatorFeeBps: bps,
-      rewardsSol: Math.floor(rewardsSol * 1e6) / 1e6,
+      rewards: Math.floor(rewardsRaw * 1e6) / 1e6,
+      rewardsSymbol: CONFIG.pairSymbol,
       trades,
       feesUsd: floor2(rewardsUsd),
       bigMacs: Math.floor(rewardsUsd / CONFIG.bigMacUsd),
@@ -204,7 +213,7 @@ export default async function handler(req, res) {
         bigMacs: Math.floor(treasuryUsd / CONFIG.bigMacUsd),
         assets,
       },
-      partial,
+      partial: partial || missed > 0,
       updatedAt: new Date().toISOString(),
     });
   } catch {

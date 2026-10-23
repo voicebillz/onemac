@@ -118,7 +118,7 @@ async function loadStats() {
     countUp($("#fees"), s.feesUsd, usd);
     countUp($("#inflows"), s.trades ?? 0, int);
     const note = $("#counter-note");
-    note.textContent = `Creator rewards from every $ONEMAC trade (${amt(s.rewardsSol ?? 0)} SOL), read live on Solana. `;
+    note.textContent = `Creator rewards from every $ONEMAC trade (${amt(s.rewards ?? 0)} ${s.rewardsSymbol || CONFIG.pairSymbol}), read live on Solana. `;
     note.append(link(`https://solscan.io/account/${s.wallet}`, "View wallet"));
     if (s.creatorFeeBps) setRate(s.creatorFeeBps);
     renderTreasury(s.treasury);
